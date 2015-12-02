@@ -157,16 +157,16 @@ object Customer {
 
     import customerBehaviorDsl.theBehaviorBuilder._
 
-    whenConstructing { it =>
-      it.validateCommands {
+    whenConstructing {
+      processCreationCommands {
         case cmd: CreateCustomer =>
           CustomerCreated(cmd.name, cmd.vatNumber, metadata(id, cmd))
-      } acceptsEvents {
+      } {
         case e: CustomerCreated =>
           Customer(e.name, address = None, e.vatNumber, id)
       }
-    } whenUpdating { it =>
-      it.validateCommands {
+    } whenUpdating {
+      processUpdatesCommands {
         case (_, cmd: ChangeName) =>
           NameChanged(cmd.name, metadata(id, cmd))
         case (_, cmd: ChangeAddressStreet) =>
@@ -177,7 +177,7 @@ object Customer {
             AddressCityChanged(cmd.address.city, metadata(id, cmd)),
             AddressCountryChanged(cmd.address.country, metadata(id, cmd))
           )
-      } acceptsEvents {
+      } {
         case (customer, e: NameChanged) =>
           customer.copy(name = e.name)
         case (customer, e: AddressStreetChanged) =>
@@ -187,15 +187,15 @@ object Customer {
         case (customer, e: AddressCountryChanged) =>
           customer.copy(address = customer.address.map(_.copy(country = e.country)))
       }
-    } whenUpdating { it =>
-      it.validateCommands {
+    } whenUpdating {
+      processUpdatesCommands {
         case (customer, cmd: ReplaceVatNumber) if customer.hasVatNumber =>
           VatNumberReplaced(cmd.vat, customer.vatNumber.get, metadata(id, cmd))
         case (customer, cmd: AddVatNumber) if customer.doesNotHaveVatNumber =>
           VatNumberAdded(cmd.vat, metadata(id, cmd))
         case (customer, cmd: RemoveVatNumber.type) if customer.hasVatNumber =>
           VatNumberRemoved(metadata(id, cmd))
-      } acceptsEvents {
+      } {
         case (customer, e: VatNumberAdded) =>
           customer.copy(vatNumber = Some(e.vat))
         case (customer, e: VatNumberReplaced) =>

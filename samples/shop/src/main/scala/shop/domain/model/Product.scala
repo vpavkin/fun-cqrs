@@ -94,18 +94,18 @@ object Product {
 
     import productBehaviorDsl.theBehaviorBuilder._
 
-    whenConstructing { it =>
-      it.validateCommands {
+    whenConstructing {
+      processCreationCommands {
         case cmd: CreateProduct if cmd.price > 0 =>
           ProductCreated(cmd.name, cmd.description, cmd.price, metadata(id, cmd))
         case createCmd: CreateProduct =>
           new CommandException("Price is too low!")
-      } acceptsEvents {
+      }  {
         case e: ProductCreated =>
           Product(e.name, e.description, e.price, id)
       }
-    } whenUpdating { it =>
-      it.validateCommands {
+    } whenUpdating {
+      processUpdatesCommands {
         case (prod, cmd: ChangePrice) if cmd.price < prod.price =>
           new CommandException("Can't decrease the price")
         case (_, cmd: ChangePrice) if cmd.price <= 0 =>
@@ -114,7 +114,7 @@ object Product {
           PriceChanged(cmd.price, metadata(id, cmd))
         case (_, cmd: ChangeName) =>
           NameChanged(cmd.name, metadata(id, cmd))
-      } acceptsEvents {
+      } {
         case (product, e: NameChanged) =>
           product.copy(name = e.newName)
         case (product, e: PriceChanged) =>

@@ -50,11 +50,11 @@ class BehaviorDsl[A <: AggregateLike] extends AggregateAliases {
     // from Event to new Aggregate
     type EventToAggregate = PartialFunction[Event, Aggregate]
 
-    def validateCommands(c2em: CommandToEventMagnet): CreationBuilder = {
+    private def validateCommands(c2em: CommandToEventMagnet): CreationBuilder = {
       copy(processCommandFunction = processCommandFunction orElse c2em)
     }
 
-    def acceptsEvents(e2a: EventToAggregate): CreationBuilder = {
+    private def acceptsEvents(e2a: EventToAggregate): CreationBuilder = {
       copy(handleEventFunction = handleEventFunction orElse e2a)
     }
 
@@ -124,11 +124,11 @@ class BehaviorDsl[A <: AggregateLike] extends AggregateAliases {
 
     type EventToAggregate = PartialFunction[(Aggregate, Event), Aggregate]
 
-    def validateCommands(c2em: CommandToEventMagnet): UpdatesBuilder = {
+    private def validateCommands(c2em: CommandToEventMagnet): UpdatesBuilder = {
       copy(processCommandFunction = processCommandFunction orElse c2em)
     }
 
-    def acceptsEvents(e2a: EventToAggregate): UpdatesBuilder = {
+    private def acceptsEvents(e2a: EventToAggregate): UpdatesBuilder = {
       copy(handleEventFunction = handleEventFunction orElse e2a)
     }
 

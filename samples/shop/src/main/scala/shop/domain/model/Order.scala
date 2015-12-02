@@ -83,14 +83,14 @@ object Order {
 
     import orderBehaviorDsl.theBehaviorBuilder._
 
-    whenConstructing { it =>
-      it.validateCommands {
+    whenConstructing {
+      processCreationCommands {
         case cmd: CreateOrder => OrderCreated(cmd.customerId, metadata(orderNum, cmd))
-      }.acceptsEvents {
+      } {
         case evt: OrderCreated => Order(orderNum, evt.customerId)
       }
-    } whenUpdating { it =>
-      it.validateCommands {
+    } whenUpdating {
+      processUpdatesCommands {
         case (order, cmd: Execute.type) if order.status == Executed =>
           new CommandException(s"Order is already executed")
         case (order, cmd: Execute.type) if order.status == Cancelled =>
@@ -109,7 +109,7 @@ object Order {
           OrderExecuted(metadata(orderNum, cmd))
         case (order, cmd: Cancel.type) if order.status == Open =>
           OrderCancelled(metadata(orderNum, cmd))
-      } acceptsEvents {
+      } {
         case (order, evt: ProductAdded) =>
           order.addProduct(evt.productNumber)
         case (order, evt: ProductRemoved) =>
