@@ -50,12 +50,16 @@ class BehaviorDsl[A <: AggregateLike] extends AggregateAliases {
     // from Event to new Aggregate
     type EventToAggregate = PartialFunction[Event, Aggregate]
 
-    def processesCommands(pf: CommandToEventMagnet): CreationBuilder = {
-      copy(processCommandFunction = processCommandFunction orElse pf)
+    def validateCommands(c2em: CommandToEventMagnet): CreationBuilder = {
+      copy(processCommandFunction = processCommandFunction orElse c2em)
     }
 
-    def acceptsEvents(pf: EventToAggregate): CreationBuilder = {
-      copy(handleEventFunction = handleEventFunction orElse pf)
+    def acceptsEvents(e2a: EventToAggregate): CreationBuilder = {
+      copy(handleEventFunction = handleEventFunction orElse e2a)
+    }
+
+    def processCommands(c2em: CommandToEventMagnet)(e2a: EventToAggregate): CreationBuilder = {
+      validateCommands(c2em).acceptsEvents(e2a)
     }
 
     val fallbackFunction: CommandToEventMagnet = {
@@ -120,12 +124,16 @@ class BehaviorDsl[A <: AggregateLike] extends AggregateAliases {
 
     type EventToAggregate = PartialFunction[(Aggregate, Event), Aggregate]
 
-    def processesCommands(pf: CommandToEventMagnet): UpdatesBuilder = {
-      copy(processCommandFunction = processCommandFunction orElse pf)
+    def validateCommands(c2em: CommandToEventMagnet): UpdatesBuilder = {
+      copy(processCommandFunction = processCommandFunction orElse c2em)
     }
 
-    def acceptsEvents(pf: EventToAggregate): UpdatesBuilder = {
-      copy(handleEventFunction = handleEventFunction orElse pf)
+    def acceptsEvents(e2a: EventToAggregate): UpdatesBuilder = {
+      copy(handleEventFunction = handleEventFunction orElse e2a)
+    }
+
+    def processCommands(c2em: CommandToEventMagnet)(e2a: EventToAggregate): UpdatesBuilder = {
+      validateCommands(c2em).acceptsEvents(e2a)
     }
 
     val fallbackFunction: CommandToEventMagnet = {
@@ -175,7 +183,7 @@ class BehaviorDsl[A <: AggregateLike] extends AggregateAliases {
           val handleNoEvents: UpdatesEventToAggregate = {
             case (aggregate, _) => aggregate
           }
-          (handleEvents orElse handleNoEvents)(aggregate, evt)
+          (handleEvents orElse handleNoEvents) (aggregate, evt)
         }
 
         def isEventDefined(event: Event): Boolean =
@@ -195,13 +203,26 @@ class BehaviorDsl[A <: AggregateLike] extends AggregateAliases {
       copy(updatesBuilder = transformer.apply(updatesBuilder))
   }
 
-  val behaviorBuilder: BehaviorBuilder[Pending, Pending] =
-    new BehaviorBuilder[Pending, Pending](new CreationBuilder, new UpdatesBuilder)
+  object theCreationBuilder extends CreationBuilder
+
+  object theUpdatesBuilder extends UpdatesBuilder
+
+  object theBehaviorBuilder extends BehaviorBuilder[Pending, Pending](creationBuilder = theCreationBuilder, updatesBuilder = theUpdatesBuilder) {
+
+    def processCreationCommands(c2em: theCreationBuilder.CommandToEventMagnet)(e2a: theCreationBuilder.EventToAggregate): CreationBuilder => CreationBuilder = {
+      _ => theCreationBuilder.processCommands(c2em)(e2a)
+    }
+
+    def processUpdatesCommands(c2em: theUpdatesBuilder.CommandToEventMagnet)(e2a: theUpdatesBuilder.EventToAggregate): UpdatesBuilder => UpdatesBuilder = {
+      _ => theUpdatesBuilder.processCommands(c2em)(e2a)
+    }
+
+  }
 
 }
 
 object BehaviorDsl {
   def behaviorFor[A <: AggregateLike] = {
-    new BehaviorDsl[A].behaviorBuilder
+    new BehaviorDsl[A].theBehaviorBuilder
   }
 }

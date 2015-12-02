@@ -92,10 +92,10 @@ object Product {
 
     val productBehaviorDsl = new BehaviorDsl[Product]
 
-    import productBehaviorDsl.behaviorBuilder._
+    import productBehaviorDsl.theBehaviorBuilder._
 
     whenConstructing { it =>
-      it.processesCommands {
+      it.validateCommands {
         case cmd: CreateProduct if cmd.price > 0 =>
           ProductCreated(cmd.name, cmd.description, cmd.price, metadata(id, cmd))
         case createCmd: CreateProduct =>
@@ -105,7 +105,7 @@ object Product {
           Product(e.name, e.description, e.price, id)
       }
     } whenUpdating { it =>
-      it.processesCommands {
+      it.validateCommands {
         case (prod, cmd: ChangePrice) if cmd.price < prod.price =>
           new CommandException("Can't decrease the price")
         case (_, cmd: ChangePrice) if cmd.price <= 0 =>

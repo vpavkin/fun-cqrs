@@ -81,16 +81,16 @@ object Order {
 
     val orderBehaviorDsl = new BehaviorDsl[Order]
 
-    import orderBehaviorDsl.behaviorBuilder._
+    import orderBehaviorDsl.theBehaviorBuilder._
 
     whenConstructing { it =>
-      it.processesCommands {
+      it.validateCommands {
         case cmd: CreateOrder => OrderCreated(cmd.customerId, metadata(orderNum, cmd))
       }.acceptsEvents {
         case evt: OrderCreated => Order(orderNum, evt.customerId)
       }
     } whenUpdating { it =>
-      it.processesCommands {
+      it.validateCommands {
         case (order, cmd: Execute.type) if order.status == Executed =>
           new CommandException(s"Order is already executed")
         case (order, cmd: Execute.type) if order.status == Cancelled =>

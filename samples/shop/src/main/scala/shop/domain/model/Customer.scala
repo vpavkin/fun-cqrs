@@ -155,10 +155,10 @@ object Customer {
 
     val customerBehaviorDsl = new BehaviorDsl[Customer]
 
-    import customerBehaviorDsl.behaviorBuilder._
+    import customerBehaviorDsl.theBehaviorBuilder._
 
     whenConstructing { it =>
-      it.processesCommands {
+      it.validateCommands {
         case cmd: CreateCustomer =>
           CustomerCreated(cmd.name, cmd.vatNumber, metadata(id, cmd))
       } acceptsEvents {
@@ -166,7 +166,7 @@ object Customer {
           Customer(e.name, address = None, e.vatNumber, id)
       }
     } whenUpdating { it =>
-      it.processesCommands {
+      it.validateCommands {
         case (_, cmd: ChangeName) =>
           NameChanged(cmd.name, metadata(id, cmd))
         case (_, cmd: ChangeAddressStreet) =>
@@ -188,7 +188,7 @@ object Customer {
           customer.copy(address = customer.address.map(_.copy(country = e.country)))
       }
     } whenUpdating { it =>
-      it.processesCommands {
+      it.validateCommands {
         case (customer, cmd: ReplaceVatNumber) if customer.hasVatNumber =>
           VatNumberReplaced(cmd.vat, customer.vatNumber.get, metadata(id, cmd))
         case (customer, cmd: AddVatNumber) if customer.doesNotHaveVatNumber =>
