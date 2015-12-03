@@ -157,7 +157,7 @@ object Customer {
 
     import customerBehaviorDsl.theBehaviorBuilder._
 
-    whenConstructing {
+    whenCreating {
       processCreationCommands {
         case cmd: CreateCustomer =>
           CustomerCreated(cmd.name, cmd.vatNumber, metadata(id, cmd))

@@ -94,7 +94,7 @@ object Product {
 
     import productBehaviorDsl.theBehaviorBuilder._
 
-    whenConstructing {
+    whenCreating {
       processCreationCommands {
         case cmd: CreateProduct if cmd.price > 0 =>
           ProductCreated(cmd.name, cmd.description, cmd.price, metadata(id, cmd))

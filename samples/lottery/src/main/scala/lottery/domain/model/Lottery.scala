@@ -156,7 +156,7 @@ object Lottery {
     //      }
     //    }
 
-    whenConstructing {
+    whenCreating {
       processCreationCommands {
         case cmd: CreateLottery =>
           LotteryCreated(cmd.name, metadata(id, cmd))

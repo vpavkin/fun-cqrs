@@ -83,7 +83,7 @@ object Order {
 
     import orderBehaviorDsl.theBehaviorBuilder._
 
-    whenConstructing {
+    whenCreating {
       processCreationCommands {
         case cmd: CreateOrder => OrderCreated(cmd.customerId, metadata(orderNum, cmd))
       } {

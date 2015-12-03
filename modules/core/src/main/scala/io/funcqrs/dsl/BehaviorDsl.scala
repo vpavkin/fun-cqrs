@@ -169,7 +169,7 @@ class BehaviorDsl[A <: AggregateLike] extends AggregateAliases {
   }
 
   case class BehaviorBuilder[C <: BuildState, U <: BuildState](creationBuilder: CreationBuilder, updatesBuilder: UpdatesBuilder) {
-    def whenConstructing(newCreationBuilder: => CreationBuilder): BehaviorBuilder[CreationDefined, U] =
+    def whenCreating(newCreationBuilder: => CreationBuilder): BehaviorBuilder[CreationDefined, U] =
       copy(creationBuilder = newCreationBuilder)
 
     def whenUpdating(newUpdatesBuilder: => UpdatesBuilder): BehaviorBuilder[C, UpdatesDefined] =
