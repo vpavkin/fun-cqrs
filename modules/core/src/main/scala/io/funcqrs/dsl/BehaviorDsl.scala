@@ -50,22 +50,6 @@ class BehaviorDsl[A <: AggregateLike] extends AggregateAliases {
     // from Event to new Aggregate
     type EventToAggregate = PartialFunction[Event, Aggregate]
 
-    private def validateCommands(c2em: CommandToEventMagnet): CreationBuilder = {
-      copy(processCommandFunction = processCommandFunction orElse c2em)
-    }
-
-    private def acceptsEvents(e2a: EventToAggregate): CreationBuilder = {
-      copy(handleEventFunction = handleEventFunction orElse e2a)
-    }
-
-    def processCommands(c2em: CommandToEventMagnet)(e2a: EventToAggregate): CreationBuilder = {
-      validateCommands(c2em).acceptsEvents(e2a)
-    }
-
-    val fallbackFunction: CommandToEventMagnet = {
-      case cmd => new CommandException(s"Invalid command $cmd")
-    }
-
   }
 
   type UpdatesCommandToEventMagnet = UpdatesBuilder#CommandToEventMagnet
@@ -124,21 +108,6 @@ class BehaviorDsl[A <: AggregateLike] extends AggregateAliases {
 
     type EventToAggregate = PartialFunction[(Aggregate, Event), Aggregate]
 
-    private def validateCommands(c2em: CommandToEventMagnet): UpdatesBuilder = {
-      copy(processCommandFunction = processCommandFunction orElse c2em)
-    }
-
-    private def acceptsEvents(e2a: EventToAggregate): UpdatesBuilder = {
-      copy(handleEventFunction = handleEventFunction orElse e2a)
-    }
-
-    def processCommands(c2em: CommandToEventMagnet)(e2a: EventToAggregate): UpdatesBuilder = {
-      validateCommands(c2em).acceptsEvents(e2a)
-    }
-
-    val fallbackFunction: CommandToEventMagnet = {
-      case (agg, cmd) => new CommandException(s"Invalid command $cmd for aggregate ${agg.id}")
-    }
   }
 
   trait BuildState
@@ -156,12 +125,16 @@ class BehaviorDsl[A <: AggregateLike] extends AggregateAliases {
       new Behavior[Aggregate] {
 
         private val processCreationalCommands = creationBuilder.processCommandFunction
-        private val fallbackOnCreation = creationBuilder.fallbackFunction
         private val handleCreationalEvents = creationBuilder.handleEventFunction
+        private val fallbackOnCreation: creationBuilder.CommandToEventMagnet = {
+          case cmd => new CommandException(s"Invalid command $cmd")
+        }
 
         private val processUpdateCommands = updatesBuilder.processCommandFunction
-        private val fallbackOnUpdate = updatesBuilder.fallbackFunction
         private val handleEvents = updatesBuilder.handleEventFunction
+        private val fallbackOnUpdate: updatesBuilder.CommandToEventMagnet = {
+          case (agg, cmd) => new CommandException(s"Invalid command $cmd for aggregate ${agg.id}")
+        }
 
         def validateAsync(cmd: Command)(implicit ec: ExecutionContext): Future[Event] = {
           (processCreationalCommands orElse fallbackOnCreation)
@@ -196,11 +169,11 @@ class BehaviorDsl[A <: AggregateLike] extends AggregateAliases {
   }
 
   case class BehaviorBuilder[C <: BuildState, U <: BuildState](creationBuilder: CreationBuilder, updatesBuilder: UpdatesBuilder) {
-    def whenConstructing(transformer: CreationBuilder => CreationBuilder): BehaviorBuilder[CreationDefined, U] =
-      copy(creationBuilder = transformer.apply(creationBuilder))
+    def whenConstructing(newCreationBuilder: => CreationBuilder): BehaviorBuilder[CreationDefined, U] =
+      copy(creationBuilder = newCreationBuilder)
 
-    def whenUpdating(transformer: UpdatesBuilder => UpdatesBuilder): BehaviorBuilder[C, UpdatesDefined] =
-      copy(updatesBuilder = transformer.apply(updatesBuilder))
+    def whenUpdating(newUpdatesBuilder: => UpdatesBuilder): BehaviorBuilder[C, UpdatesDefined] =
+      copy(updatesBuilder = newUpdatesBuilder)
   }
 
   object theCreationBuilder extends CreationBuilder
@@ -209,12 +182,18 @@ class BehaviorDsl[A <: AggregateLike] extends AggregateAliases {
 
   object theBehaviorBuilder extends BehaviorBuilder[Pending, Pending](creationBuilder = theCreationBuilder, updatesBuilder = theUpdatesBuilder) {
 
-    def processCreationCommands(c2em: theCreationBuilder.CommandToEventMagnet)(e2a: theCreationBuilder.EventToAggregate): CreationBuilder => CreationBuilder = {
-      _ => theCreationBuilder.processCommands(c2em)(e2a)
+    def processCreationCommands(c2em: theCreationBuilder.CommandToEventMagnet)(e2a: theCreationBuilder.EventToAggregate) = {
+      theCreationBuilder
+        .copy(
+          processCommandFunction = theCreationBuilder.processCommandFunction orElse c2em,
+          handleEventFunction = theCreationBuilder.handleEventFunction orElse e2a)
     }
 
-    def processUpdatesCommands(c2em: theUpdatesBuilder.CommandToEventMagnet)(e2a: theUpdatesBuilder.EventToAggregate): UpdatesBuilder => UpdatesBuilder = {
-      _ => theUpdatesBuilder.processCommands(c2em)(e2a)
+    def processUpdatesCommands(c2em: theUpdatesBuilder.CommandToEventMagnet)(e2a: theUpdatesBuilder.EventToAggregate): UpdatesBuilder = {
+      theUpdatesBuilder
+        .copy(
+          processCommandFunction = theUpdatesBuilder.processCommandFunction orElse c2em,
+          handleEventFunction = theUpdatesBuilder.handleEventFunction orElse e2a)
     }
 
   }
