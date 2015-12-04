@@ -80,6 +80,12 @@ object FunCQRS {
       ProjectionPropsFactory(sourceProvider, projection, name)
     }
 
+    def projection[A](sourceProvider: EventsSourceProvider,
+                   projection: TypedProjection[A],
+                   name: String): ProjectionPropsFactory = {
+      ProjectionPropsFactory(sourceProvider, projection.asProjection, name)
+    }
+
     // ================================================================================
     // support classes and trait for AggregateService creation!
     trait Config

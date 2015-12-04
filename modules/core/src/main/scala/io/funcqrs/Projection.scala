@@ -22,14 +22,88 @@ trait Projection {
     * NOTE: In the occurrence of any failure on any of the underling Projections, this Projection may be replayed,
     * therefore idempotent operations are recommended.
     */
-  def andThen(projection: Projection) = new AndThenProjection(this, projection)
+  def andThen(projection: Projection): AndThenProjection = new AndThenProjection(this, projection)
 
   /** Builds a [[OrElseProjection]]composed of this Projection and the passed Projection.
     *
     * If this Projection is defined for a given incoming [[DomainEvent]], then this Projection will be applied,
     * otherwise we fallback to the passed Projection.
     */
-  def orElse(fallbackProjection: Projection) = new OrElseProjection(this, fallbackProjection)
+  def orElse(fallbackProjection: Projection): OrElseProjection = new OrElseProjection(this, fallbackProjection)
+
+  /** Builds a [[AndThenProjection]]composed of this Projection and the passed TypedProjection.
+    *
+    * [[DomainEvent]]s will be send to both projections. One after the other starting by this followed by the passed Projection.
+    *
+    * NOTE:
+    * - In the occurrence of any failure on any of the underling Projections, this Projection may be replayed,
+    * therefore idempotent operations are recommended.
+    * - the TypedProjection will be wrapped by the 'default' Projection which is typed to Unit.
+    */
+  def andThen[B](projection: TypedProjection[B]): AndThenProjection = new AndThenProjection(this, projection.asProjection)
+
+  /** Builds a [[OrElseProjection]]composed of this Projection and the passed TypedProjection.
+    *
+    * If this Projection is defined for a given incoming [[DomainEvent]], then this Projection will be applied,
+    * otherwise we fallback to the passed TypedProjection.
+    *
+    * NOTE: the TypedProjection will be wrapped by the 'default' Projection which is typed to Unit.
+    */
+  def orElse[B](fallbackProjection: TypedProjection[B]): OrElseProjection = new OrElseProjection(this, fallbackProjection.asProjection)
+}
+
+trait TypedProjection[A] {
+  self =>
+
+  def handleEvent: PartialFunction[DomainEvent, Future[A]]
+
+  def asProjection: Projection = new Projection {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    def handleEvent: HandleEvent = {
+      case any if self.handleEvent.isDefinedAt(any) =>
+        self.handleEvent(any).map(_ => Unit)
+    }
+  }
+
+  /** Builds a [[AndThenProjection]]composed of this TypedProjection and the passed Projection.
+    *
+    * [[DomainEvent]]s will be send to both projections. One after the other starting by this followed by the passed Projection.
+    *
+    * NOTE:
+    * - In the occurrence of any failure on any of the underling Projections, this Projection may be replayed,
+    * therefore idempotent operations are recommended.
+    * - the TypedProjection will be wrapped by the 'default' Projection which is typed to Unit.
+    */
+  def andThen(projection: Projection) = new AndThenProjection(this.asProjection, projection)
+
+  /** Builds a [[OrElseProjection]]composed of this TypedProjection and the passed Projection.
+    *
+    * If this Projection is defined for a given incoming [[DomainEvent]], then this Projection will be applied,
+    * otherwise we fallback to the passed TypedProjection.
+    *
+    * NOTE: the TypedProjection will be wrapped by the 'default' Projection which is typed to Unit.
+    */
+  def orElse(fallbackProjection: Projection) = new OrElseProjection(this.asProjection, fallbackProjection)
+
+  /** Builds a [[AndThenProjection]]composed of this TypedProjection and the passed TypedProjection.
+    *
+    * [[DomainEvent]]s will be send to both projections. One after the other starting by this followed by the passed Projection.
+    *
+    * NOTE:
+    * - In the occurrence of any failure on any of the underling Projections, this Projection may be replayed,
+    * therefore idempotent operations are recommended.
+    * - both TypedProjections will be wrapped by the 'default' Projection which is typed to Unit.
+    */
+  def andThen[B](projection: TypedProjection[B]) = new AndThenProjection(this.asProjection, projection.asProjection)
+
+  /** Builds a [[OrElseProjection]]composed of this TypedProjection and the passed Projection.
+    *
+    * If this Projection is defined for a given incoming [[DomainEvent]], then this Projection will be applied,
+    * otherwise we fallback to the passed TypedProjection.
+    *
+    * NOTE: both TypedProjections will be wrapped by the 'default' Projection which is typed to Unit.
+    */
+  def orElse[B](fallbackProjection: TypedProjection[B]) = new OrElseProjection(this.asProjection, fallbackProjection.asProjection)
 }
 
 object Projection {
