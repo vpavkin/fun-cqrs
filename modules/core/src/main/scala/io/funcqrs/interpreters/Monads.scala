@@ -16,19 +16,21 @@ object Monads {
     def pure[A](any: A): F[A]
     def map[A, B](fa: F[A])(f: A => B): F[B]
     def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
+    def recoverWith[A](fa: F[A])(pf: PartialFunction[Throwable, F[A]]): F[A]
   }
 
   implicit val identityMonad: MonadOps[Identity] = new MonadOps[Identity] {
     def pure[A](any: A): Identity[A] = any
     def map[A, B](fa: Identity[A])(f: (A) => B): Identity[B] = f(fa)
     def flatMap[A, B](fa: Identity[A])(f: (A) => Identity[B]): Identity[B] = f(fa)
+    def recoverWith[A](fa: Identity[A])(pf: PartialFunction[Throwable, Identity[A]]): Identity[A] = ???
   }
 
   implicit val tryMonad: MonadOps[Try] = new MonadOps[Try] {
     def pure[A](any: A): Try[A] = Try(any)
     def map[A, B](fa: Try[A])(f: (A) => B): Try[B] = fa.map(f)
     def flatMap[A, B](fa: Try[A])(f: (A) => Try[B]): Try[B] = fa.flatMap(f)
-
+    def recoverWith[A](fa: Try[A])(pf: PartialFunction[Throwable, Try[A]]): Try[A] = ???
   }
 
   implicit val futureMonad: MonadOps[Future] = new MonadOps[Future] {
@@ -36,11 +38,13 @@ object Monads {
     def pure[A](any: A): Future[A] = Future.successful(any)
     def map[A, B](fa: Future[A])(f: (A) => B): Future[B] = fa.map(f)
     def flatMap[A, B](fa: Future[A])(f: (A) => Future[B]): Future[B] = fa.flatMap(f)
+    def recoverWith[A](fa: Future[A])(pf: PartialFunction[Throwable, Future[A]]): Future[A] = fa.recoverWith(pf)
   }
 
   trait Monad[A, F[_]] {
     def map[B](f: A => B): F[B]
     def flatMap[B](f: A => F[B]): F[B]
+    def recoverWith(pf: PartialFunction[Throwable, F[A]]): F[A]
   }
 
   object Monad {
@@ -60,6 +64,10 @@ object Monads {
 
       def flatMap[B](f: A => F[B]): F[B] = {
         monadOps.flatMap(fa)(f)
+      }
+
+      def recoverWith(pf: PartialFunction[Throwable, F[A]]): F[A] = {
+        monadOps.recoverWith(fa)(pf)
       }
     }
 }
