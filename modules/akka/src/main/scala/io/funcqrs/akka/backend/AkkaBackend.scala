@@ -31,7 +31,7 @@ trait AkkaBackend extends Backend[Future] {
     new AggregateActorRef[A](id, aggregateManager, projectionMonitorActorRef)
   }
 
-  def configure[A <: AggregateLike: ClassTag](config: AggregateConfig[A]): AkkaBackend = {
+  def configure[A <: AggregateLike: ClassTag](config: AggregateConfigLike[A]): AkkaBackend = {
     aggregates += (ClassTagImplicits[A] -> actorOf[A](config))
     this
   }
@@ -67,9 +67,13 @@ trait AkkaBackend extends Backend[Future] {
     this
   }
 
-  def actorOf[A <: AggregateLike](config: AggregateConfig[A])(implicit ev: ClassTag[A]): ActorRef = {
+  def actorOf[A <: AggregateLike](config: AggregateConfigLike[A])(implicit ev: ClassTag[A]): ActorRef = {
     val name = config.name.getOrElse(ev.runtimeClass.getSimpleName)
-    actorSystem.actorOf(ConfigurableAggregateManager.props(config.behavior, config.passivationConfigPath), name)
+    val configPath: Option[String] = config match {
+      case AkkaAggregateConfig(_, path, _) => path
+      case _ => None
+    }
+    actorSystem.actorOf(ConfigurableAggregateManager.props(config.behavior, configPath), name)
   }
 
 }

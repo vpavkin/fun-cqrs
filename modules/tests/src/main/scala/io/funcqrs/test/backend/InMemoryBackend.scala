@@ -3,7 +3,7 @@ package io.funcqrs.test.backend
 import io.funcqrs._
 import io.funcqrs.backend.{ QuerySelectAll, Backend, QueryByTag, QueryByTags }
 import io.funcqrs.behavior.{ Behavior, State, Uninitialized, Initialized }
-import io.funcqrs.config.{ AggregateConfig, ProjectionConfig }
+import io.funcqrs.config.{ AggregateConfigLike, ProjectionConfig }
 import io.funcqrs.interpreters.Monads._
 import io.funcqrs.interpreters.{ Identity, IdentityInterpreter }
 import rx.lang.scala.Subject
@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 
 class InMemoryBackend extends Backend[Identity] {
 
-  private var aggregateConfigs: concurrent.Map[ClassTag[_], AggregateConfig[_]] = concurrent.TrieMap()
+  private var aggregateConfigs: concurrent.Map[ClassTag[_], AggregateConfigLike[_]] = concurrent.TrieMap()
   private var aggregates: concurrent.Map[AggregateId, IdentityAggregateRef[_]] = TrieMap()
 
   private val eventStream: Subject[DomainEvent] = PublishSubject()
@@ -29,14 +29,14 @@ class InMemoryBackend extends Backend[Identity] {
     aggregates.getOrElseUpdate(
       id,
       { // build new aggregateRef if not existent
-        val config = aggregateConfigs(ClassTagImplicits[A]).asInstanceOf[AggregateConfig[A]]
+        val config = aggregateConfigs(ClassTagImplicits[A]).asInstanceOf[AggregateConfigLike[A]]
         val behavior = config.behavior(id)
         new InMemoryAggregateRef(id, behavior)
       }
     ).asInstanceOf[InMemoryAggregateRef[A]]
   }
 
-  def configure[A <: AggregateLike: ClassTag](config: AggregateConfig[A]): Backend[Identity] = {
+  def configure[A <: AggregateLike: ClassTag](config: AggregateConfigLike[A]): Backend[Identity] = {
     aggregateConfigs += (ClassTagImplicits[A] -> config)
     this
   }
