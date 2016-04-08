@@ -69,7 +69,7 @@ trait AkkaBackend extends Backend[Future] {
 
   def actorOf[A <: AggregateLike](config: AggregateConfig[A])(implicit ev: ClassTag[A]): ActorRef = {
     val name = config.name.getOrElse(ev.runtimeClass.getSimpleName)
-    actorSystem.actorOf(ConfigurableAggregateManager.props(config.behavior), name)
+    actorSystem.actorOf(ConfigurableAggregateManager.props(config.behavior, config.passivationConfigPath), name)
   }
 
 }

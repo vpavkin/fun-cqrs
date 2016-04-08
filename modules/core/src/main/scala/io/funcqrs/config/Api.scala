@@ -23,7 +23,7 @@ object Api {
       behaviorFunc(id) orElse fallback
     }
 
-    AggregateConfig[A](None, behaviorWithFallback)
+    AggregateConfig[A](None, None, behaviorWithFallback)
   }
 
   /** Initiates the configuration of a Projection */
