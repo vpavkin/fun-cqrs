@@ -88,21 +88,10 @@ object PassivationStrategy extends LazyLogging {
  * Defines a passivation strategy that will kill child actors when creating a new child
  * will push us over a threshold
  */
-class MaxChildrenPassivationStrategy(config: Config) extends PassivationStrategy {
+trait MaxChildrenPassivationStrategySupport extends PassivationStrategy {
+  def max: Int
+  def killAtOnce: Int
 
-  val max = {
-    Try(config.getInt("max-children.max")).getOrElse(40)
-  }
-
-  val killAtOnce = {
-    Try(config.getInt("max-children.kill-at-once")).getOrElse(20)
-  }
-  /**
-   * Return all the children that may be killed.
-   *
-   * @param candidates all the children for a given AggregateManager
-   * @return
-   */
   def determineChildrenToKill(candidates: Iterable[ActorRef]): Iterable[ActorRef] = {
     if (candidates.size > max) {
       candidates.take(killAtOnce)
@@ -114,20 +103,34 @@ class MaxChildrenPassivationStrategy(config: Config) extends PassivationStrategy
   override def toString = s"${this.getClass.getSimpleName}(max=$max,killAtOnce=$killAtOnce)"
 }
 
-/**
- * Defines a passivation strategy that will kill child actors when they have been idle for too long
- */
-class InactivityTimeoutPassivationStrategy(config: Config) extends PassivationStrategy {
+class MaxChildrenPassivationStrategy(config: Config) extends MaxChildrenPassivationStrategySupport {
+  override val max = {
+    Try(config.getInt("max-children.max")).getOrElse(40)
+  }
+
+  override val killAtOnce = {
+    Try(config.getInt("max-children.kill-at-once")).getOrElse(20)
+  }
+}
+
+trait InactivityTimeoutPassivationStrategySupport extends PassivationStrategy {
 
   /**
    * Determines how long they can idle in memory
    *
    * @return
    */
+  def inactivityTimeout: Duration
 
-  val inactivityTimeout: Duration = {
+  override def toString = s"${this.getClass.getSimpleName}(inactivityTimeout=$inactivityTimeout)"
+}
+
+/**
+ * Defines a passivation strategy that will kill child actors when they have been idle for too long
+ */
+class InactivityTimeoutPassivationStrategy(config: Config) extends InactivityTimeoutPassivationStrategySupport {
+  override val inactivityTimeout: Duration = {
     Try(Duration(config.getLong("inactivity-timeout"), SECONDS)).getOrElse(1.hours)
   }
 
-  override def toString = s"${this.getClass.getSimpleName}(inactivityTimeout=$inactivityTimeout)"
 }

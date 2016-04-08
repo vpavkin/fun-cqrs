@@ -144,7 +144,7 @@ trait AggregateManager extends Actor
    */
   def aggregateActorProps(id: Id): Props = {
     val inactivityTimeout: Option[Duration] = passivationStrategy match {
-      case x: InactivityTimeoutPassivationStrategy => Some(x.inactivityTimeout)
+      case x: InactivityTimeoutPassivationStrategySupport => Some(x.inactivityTimeout)
       case _ => None
     }
     Props(classOf[AggregateActor[Aggregate]], id, behavior(id), inactivityTimeout, context.self.path.name)
@@ -152,7 +152,7 @@ trait AggregateManager extends Actor
 
   private def killChildrenIfNecessary() =
     passivationStrategy match {
-      case x: MaxChildrenPassivationStrategy =>
+      case x: MaxChildrenPassivationStrategySupport =>
         val candidates = x.determineChildrenToKill(context.children)
 
         val childrenToTerminate = candidates.filterNot(childrenBeingTerminated)
